@@ -4,15 +4,18 @@ from typing import Dict, List
 from lib.text_preprocessor import text_preprocessor
 
 
-def search(movie_data: Dict, query: str) -> List:
+def search(movie_data: Dict, query: str, search_limit: int = 5) -> List:
     search_results = []
-    search_counter = 0
     for movie in movie_data["movies"]:
         movie_title = movie["title"]
-        if query in text_preprocessor(movie_title):
+        title_tokens = text_preprocessor(movie_title)
+        query_tokens = text_preprocessor(query)
+
+        matched = any(q in t for t in title_tokens for q in query_tokens)
+
+        if matched:
             search_results.append(movie_title)
-            search_counter += 1
-        if search_counter >= 5:
+        if len(search_results) >= search_limit:
             break
     return search_results
 
