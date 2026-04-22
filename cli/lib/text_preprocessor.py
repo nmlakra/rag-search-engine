@@ -1,13 +1,14 @@
 import string
 from typing import List
 from pathlib import Path
+from nltk.stem import PorterStemmer
 
 STOP_WORD_FILE_PATH = Path("data/stopwords.txt")
 
 
 def load_stopwords(fp: Path) -> List[str]:
     with open(fp) as f:
-        lines = [l.strip() for l in f.readlines()]
+        lines = [line.strip() for line in f.readlines()]
         return lines
 
 
@@ -35,6 +36,10 @@ def text_preprocessor(text: str) -> List[str]:
     text_tokenized = tokenizer(text_depunctuated)
 
     stopwords = load_stopwords(STOP_WORD_FILE_PATH)
-    text_stopwords_filterd = remove_stopwords(text_tokenized, stopwords)
+    tokens_stopword_filterd = remove_stopwords(text_tokenized, stopwords)
 
-    return text_stopwords_filterd
+    # Token stemming
+    stemmer = PorterStemmer()
+    tokens_stemmed = [stemmer.stem(token) for token in tokens_stopword_filterd]
+
+    return tokens_stemmed
