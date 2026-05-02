@@ -1,4 +1,5 @@
 from typing import Dict, List
+import math
 from collections import defaultdict, Counter
 from lib.text_preprocessor import text_preprocessor
 import os
@@ -45,6 +46,17 @@ class InvertedIndex:
         else:
             return 0
 
+    def get_idf(self, term: str) -> float:
+        token = text_preprocessor(term)[0]
+        total_doc_count = len(self.docmap)
+        term_match_doc_count = len(self.index[token])
+
+        idf_num = total_doc_count + 1
+        idf_den = term_match_doc_count + 1
+        idf = math.log(idf_num / idf_den)
+
+        return idf
+
     def build(self, documents: Dict) -> None:
         for document in documents["movies"]:
             doc_id = document["id"]
@@ -76,3 +88,4 @@ class InvertedIndex:
                 self.term_frequencies = pickle.load(tf_cache)
         else:
             raise FileNotFoundError("Provided cache file path not found.")
+

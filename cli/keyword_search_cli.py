@@ -1,25 +1,10 @@
+import math
 import argparse
 import json
-from typing import Dict, List
+from typing import List
 from lib.text_preprocessor import text_preprocessor
 from lib.inverted_index import InvertedIndex
 from config import CACHE_DIR_PATH
-
-
-def search(movie_data: Dict, query: str, search_limit: int = 5) -> List:
-    search_results = []
-    for movie in movie_data["movies"]:
-        movie_title = movie["title"]
-        title_tokens = text_preprocessor(movie_title)
-        query_tokens = text_preprocessor(query)
-
-        matched = any(q in t for t in title_tokens for q in query_tokens)
-
-        if matched:
-            search_results.append(movie_title)
-        if len(search_results) >= search_limit:
-            break
-    return search_results
 
 
 def inverted_search(query: str, indexer: InvertedIndex, search_limit: int = 5) -> List:
@@ -35,16 +20,36 @@ def inverted_search(query: str, indexer: InvertedIndex, search_limit: int = 5) -
     return [indexer.docmap[res].title for res in search_results[:5]]
 
 
+def get_idf(indexer: InvertedIndex, term: str) -> float:
+    total_doc_count = 0
+    term_match_doc_count = 0
+    for doc_id in indexer.docmap:
+        term_match_doc_count += 1 if indexer.get_tf(doc_id, term) else 0
+        total_doc_count += 1
+
+    idf_num = total_doc_count + 1
+    idf_den = term_match_doc_count + 1
+    idf = math.log(idf_num / idf_den)
+
+    return idf
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Keyword Search CLI")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     subparsers.add_parser("build", help="Creates inverted index")
+
     tf_parser = subparsers.add_parser(
         "tf", help="Provides term frequencies for <document id> <term>"
     )
     tf_parser.add_argument("doc_id", help="Document id", type=int)
     tf_parser.add_argument("term", help="Term")
+
+    idf_parser = subparsers.add_parser(
+        "idf", help="Provides the inverse document frequency"
+    )
+    idf_parser.add_argument("term", help="IDF term")
 
     search_parser = subparsers.add_parser("search", help="Search movies using BM25")
     search_parser.add_argument("query", type=str, help="Search query")
@@ -83,6 +88,17 @@ def main() -> None:
             doc_id = args.doc_id
             term = args.term
             print("Term Frequency:", indexer.get_tf(doc_id, term))
+
+        case "idf":
+            # Load index
+            try:
+                indexer.load()
+            except FileNotFoundError:
+                print("Couldn't find cache, perhaps you forgot to build it.")
+
+            term = args.term
+            idf = get_idf(indexer, term)
+            print(f"Inverse document frequency of '{args.term}': {idf:.2f}")
 
         case _:
             parser.print_help()
