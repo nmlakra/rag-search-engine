@@ -1,10 +1,9 @@
-import math
 import argparse
 import json
 from typing import List
 from lib.text_preprocessor import text_preprocessor
 from lib.inverted_index import InvertedIndex
-from config import CACHE_DIR_PATH
+from config import CACHE_DIR_PATH, BM25_K1, BM25_B
 
 
 def inverted_search(query: str, indexer: InvertedIndex, search_limit: int = 5) -> List:
@@ -37,6 +36,25 @@ def main() -> None:
     )
     tfidf_parser.add_argument("doc_id", help="Document id", type=int)
     tfidf_parser.add_argument("term", help="Term")
+
+    bm25_idf_parser = subparsers.add_parser(
+        "bm25idf", help="Get BM25 IDF score for a given term"
+    )
+    bm25_idf_parser.add_argument(
+        "term", type=str, help="Term to get BM25 IDF score for"
+    )
+
+    bm25_tf_parser = subparsers.add_parser(
+        "bm25tf", help="Provides BM25 term frequencies for <document id> <term>"
+    )
+    bm25_tf_parser.add_argument("doc_id", help="Document id", type=int)
+    bm25_tf_parser.add_argument("term", help="Term")
+    bm25_tf_parser.add_argument(
+        "k1", type=float, nargs="?", default=BM25_K1, help="Tunable BM25 K1 parameter"
+    )
+    bm25_tf_parser.add_argument(
+        "b", type=float, nargs="?", default=BM25_B, help="Tunable BM25 b parameter"
+    )
 
     idf_parser = subparsers.add_parser(
         "idf", help="Provides the inverse document frequency"
@@ -103,6 +121,34 @@ def main() -> None:
             tf_idf = indexer.get_tf_idf(doc_id, term)
             print(
                 f"TF-IDF score of '{args.term}' in document '{args.doc_id}': {tf_idf:.2f}"
+            )
+
+        case "bm25idf":
+            # Load index
+            try:
+                indexer.load()
+            except FileNotFoundError:
+                print("Couldn't find cache, perhaps you forgot to build it.")
+
+            # doc_id = args.doc_id
+            term = args.term
+            print(f"Term: {term}")
+            bm25idf = indexer.get_bm25_idf(term)
+            print(f"BM25 IDF score of '{args.term}': {bm25idf:.2f}")
+
+        case "bm25tf":
+            # Load index
+            try:
+                indexer.load()
+            except FileNotFoundError:
+                print("Couldn't find cache, perhaps you forgot to build it.")
+            doc_id = args.doc_id
+            term = args.term
+            k1 = args.k1
+            b = args.b
+            bm25tf = indexer.get_bm25_tf(doc_id, term, k1, b)
+            print(
+                f"BM25 TF score of '{args.term}' in document '{args.doc_id}': {bm25tf:.2f}"
             )
 
         case _:
