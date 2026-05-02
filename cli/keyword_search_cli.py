@@ -20,20 +20,6 @@ def inverted_search(query: str, indexer: InvertedIndex, search_limit: int = 5) -
     return [indexer.docmap[res].title for res in search_results[:5]]
 
 
-def get_idf(indexer: InvertedIndex, term: str) -> float:
-    total_doc_count = 0
-    term_match_doc_count = 0
-    for doc_id in indexer.docmap:
-        term_match_doc_count += 1 if indexer.get_tf(doc_id, term) else 0
-        total_doc_count += 1
-
-    idf_num = total_doc_count + 1
-    idf_den = term_match_doc_count + 1
-    idf = math.log(idf_num / idf_den)
-
-    return idf
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Keyword Search CLI")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -45,6 +31,12 @@ def main() -> None:
     )
     tf_parser.add_argument("doc_id", help="Document id", type=int)
     tf_parser.add_argument("term", help="Term")
+
+    tfidf_parser = subparsers.add_parser(
+        "tfidf", help="Provides TF-IDF scores for <document id> <term>"
+    )
+    tfidf_parser.add_argument("doc_id", help="Document id", type=int)
+    tfidf_parser.add_argument("term", help="Term")
 
     idf_parser = subparsers.add_parser(
         "idf", help="Provides the inverse document frequency"
@@ -97,8 +89,21 @@ def main() -> None:
                 print("Couldn't find cache, perhaps you forgot to build it.")
 
             term = args.term
-            idf = get_idf(indexer, term)
+            idf = indexer.get_idf(term)
             print(f"Inverse document frequency of '{args.term}': {idf:.2f}")
+
+        case "tfidf":
+            # Load index
+            try:
+                indexer.load()
+            except FileNotFoundError:
+                print("Couldn't find cache, perhaps you forgot to build it.")
+            doc_id = args.doc_id
+            term = args.term
+            tf_idf = indexer.get_tf_idf(doc_id, term)
+            print(
+                f"TF-IDF score of '{args.term}' in document '{args.doc_id}': {tf_idf:.2f}"
+            )
 
         case _:
             parser.print_help()

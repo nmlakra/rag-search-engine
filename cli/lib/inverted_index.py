@@ -57,6 +57,12 @@ class InvertedIndex:
 
         return idf
 
+    def get_tf_idf(self, doc_id: int, term: str) -> float:
+        tf = self.get_tf(doc_id, term)
+        idf = self.get_idf(term)
+
+        return tf * idf
+
     def build(self, documents: Dict) -> None:
         for document in documents["movies"]:
             doc_id = document["id"]
