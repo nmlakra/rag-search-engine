@@ -56,6 +56,14 @@ def main() -> None:
         "b", type=float, nargs="?", default=BM25_B, help="Tunable BM25 b parameter"
     )
 
+    bm25_search_parser = subparsers.add_parser(
+        "bm25search", help="Search movies using BM25 algorithm"
+    )
+    bm25_search_parser.add_argument("query", type=str, help="Search query")
+    bm25_search_parser.add_argument(
+        "--limit", type=int, default=5, help="Number of search results to return"
+    )
+
     idf_parser = subparsers.add_parser(
         "idf", help="Provides the inverse document frequency"
     )
@@ -150,6 +158,23 @@ def main() -> None:
             print(
                 f"BM25 TF score of '{args.term}' in document '{args.doc_id}': {bm25tf:.2f}"
             )
+
+        case "bm25search":
+            # Load index
+            try:
+                indexer.load()
+            except FileNotFoundError:
+                print("Couldn't find cache, perhaps you forgot to build it.")
+            query = args.query
+            limit = args.limit
+            print(f"Searching for: {query}")
+
+            search_results = indexer.bm25_search(query, limit, BM25_K1, BM25_B)
+            for index, search_result in enumerate(search_results):
+                doc_id = search_result[0]
+                doc_score = search_result[1]
+                doc_title = indexer.docmap[doc_id].title
+                print(f"{index + 1}. ({doc_id}) {doc_title} - (Score: {doc_score:.2f})")
 
         case _:
             parser.print_help()

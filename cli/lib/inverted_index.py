@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import math
 from collections import defaultdict, Counter
 from lib.text_preprocessor import text_preprocessor
@@ -109,11 +109,35 @@ class InvertedIndex:
 
         return bm25_num / bm25_den
 
-    def get_bm25_tf_idf(self, doc_id: int, term: str) -> float:
-        tf = self.get_tf(doc_id, term)
+    def bm25(self, doc_id: int, term: str, k1: float, b: float) -> float:
+        bm25_tf = self.get_bm25_tf(doc_id, term, k1, b)
         bm25_idf = self.get_bm25_idf(term)
 
-        return tf * bm25_idf
+        return bm25_tf * bm25_idf
+
+    def bm25_search(self, query: str, limit: int, k1: float, b: float) -> List[int]:
+        query_tokens = text_preprocessor(query)
+
+        doc_ids = self.doc_lengths.keys()
+        scores = {}
+        for doc_id in doc_ids:
+            doc_scores = []
+            for token in query_tokens:
+                doc_scores.append(self.bm25(doc_id, token, k1, b))
+            scores[doc_id] = sum(doc_scores)
+
+        top_docs = self._get_top_docs(scores, limit)
+
+        return top_docs
+
+    def _get_top_docs(
+        self, doc_scores: Dict[int, float], limit: int
+    ) -> List[Tuple[int, float]]:
+        sorted_docs_scores = sorted(
+            doc_scores.items(), key=lambda x: x[1], reverse=True
+        )
+
+        return sorted_docs_scores[:limit]
 
     def build(self, documents: Dict) -> None:
         for document in documents["movies"]:
