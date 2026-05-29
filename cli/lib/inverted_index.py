@@ -115,7 +115,9 @@ class InvertedIndex:
 
         return bm25_tf * bm25_idf
 
-    def bm25_search(self, query: str, limit: int, k1: float, b: float) -> List[int]:
+    def bm25_search(
+        self, query: str, limit: int, k1: float, b: float
+    ) -> List[Tuple[int, float]]:
         query_tokens = text_preprocessor(query)
 
         doc_ids = self.doc_lengths.keys()
